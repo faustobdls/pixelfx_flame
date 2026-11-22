@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart' show SizedBox;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pixelfx_core/pixelfx_core.dart';
 import 'package:pixelfx_flame/pixelfx_flame.dart';
+import 'package:pixelfx_iso/pixelfx_iso.dart';
 
 final PureEffect _flameTestSlash = PureEffect(
   meta: const EffectMeta(
@@ -125,6 +126,57 @@ void main() {
 
       expect(fxComp.isMounted, isFalse);
       expect(actComp.isMounted, isFalse);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  test('PixelFxFlameBaker.bakeTurntableAtlas bakes 4 isometric directions cleanly', () async {
+    final turntable = await PixelFxFlameBaker.bakeTurntableAtlas(
+      _flameTestSlash,
+      directions: const [IsoDir.se, IsoDir.sw, IsoDir.nw, IsoDir.ne],
+      seed: 4,
+    );
+    expect(turntable.animations.length, equals(4));
+    expect(turntable[IsoDir.se].atlas.frameCount, equals(7));
+    turntable.dispose();
+  });
+
+  testWidgets(
+    '2.5D iso Flame components sort priority by world coordinates and render in FlameGame',
+    (tester) async {
+      final bgComp = PixelIsoSpriteComponent(
+        asset: isoStoneTile,
+        worldX: 0.0,
+        worldY: 0.0,
+      );
+      final fgComp = PixelIsoEffectComponent(
+        source: _flameTestSlash,
+        dir: IsoDir.se,
+        worldX: 1.5,
+        worldY: 1.5,
+      );
+      final actComp = PixelIsoActComponent(
+        effect: _flameTestSlash,
+        dir: IsoDir.nw,
+        worldX: 2.0,
+        worldY: 2.0,
+      );
+      expect(fgComp.priority, greaterThan(bgComp.priority));
+      expect(actComp.priority, greaterThan(fgComp.priority));
+
+      final game = FlameGame();
+      await game.addAll([bgComp, fgComp, actComp]);
+      await tester.pumpWidget(GameWidget(game: game));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      for (var i = 0; i < 6; i++) {
+        game.update(1 / 30);
+      }
+      final recorder = ui.PictureRecorder();
+      game.render(ui.Canvas(recorder));
+      recorder.endRecording().dispose();
 
       await tester.pumpWidget(const SizedBox.shrink());
     },

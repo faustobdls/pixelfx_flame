@@ -21,7 +21,7 @@ class PixelFxFlameExtension extends PixelFxExtension {
   ExtensionManifest get manifest => const ExtensionManifest(
         id: 'pixelfx.flame',
         name: 'PixelFx Flame Bridge',
-        version: '0.1.0',
+        version: '0.2.0',
         description:
             'Flame engine runtime adapter providing PositionComponents and packed SpriteAnimation baking.',
         author: 'Fausto BDLS',

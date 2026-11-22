@@ -6,6 +6,29 @@ import 'dart:ui' show FilterQuality, Paint;
 import 'package:flame/components.dart';
 import 'package:pixelfx_core/pixelfx_core.dart';
 import 'package:pixelfx_flutter/pixelfx_flutter.dart';
+import 'package:pixelfx_iso/pixelfx_iso.dart';
+
+/// Holds baked 8-direction (or custom subset) [BakedFlameAnimation]s for an isometric turntable.
+class BakedIsoTurntable {
+  final Map<IsoDir, BakedFlameAnimation> animations;
+  final (int w, int h) frameSize;
+  final (int ox, int oy) origin;
+
+  const BakedIsoTurntable({
+    required this.animations,
+    required this.frameSize,
+    required this.origin,
+  });
+
+  BakedFlameAnimation operator [](IsoDir dir) => animations[dir]!;
+
+  /// Dispose all baked atlas textures across orientations.
+  void dispose() {
+    for (final a in animations.values) {
+      a.dispose();
+    }
+  }
+}
 
 /// Holds a Flame [SpriteAnimation] together with its backing [PixelFxSheetAtlas]
 /// so callers can deterministically [dispose] GPU memory on scene unload.
@@ -110,4 +133,46 @@ class PixelFxFlameBaker {
           ..filterQuality = FilterQuality.none
           ..isAntiAlias = false,
       );
+
+  /// Bake all [directions] of [asset] projected onto [plane] into a [BakedIsoTurntable].
+  static Future<BakedIsoTurntable> bakeTurntableAtlas(
+    PixelAsset asset, {
+    List<IsoDir> directions = IsoDir.values,
+    IsoPlane plane = IsoPlane.floor,
+    IsoProjection projection = const IsoProjection.standard(),
+    BackdropKind bg = BackdropKind.none,
+    int? fps,
+    int? seed,
+    Map<String, Object?> options = const {},
+    List<PostProcessor> postProcessors = const [],
+  }) async {
+    final isNativeIso = asset.meta.extra['iso'] == true;
+    final out = <IsoDir, BakedFlameAnimation>{};
+    for (final d in directions) {
+      final projected = isNativeIso
+          ? asset
+          : IsoProjectedEffect(
+              asset,
+              plane: plane,
+              projection: projection,
+              dir: d,
+              bg: bg,
+            );
+      out[d] = await bakeWithAtlas(
+        projected,
+        bg: bg,
+        fps: fps,
+        seed: seed,
+        showActor: false,
+        options: options,
+        postProcessors: postProcessors,
+      );
+    }
+    final first = out.values.first;
+    return BakedIsoTurntable(
+      animations: out,
+      frameSize: (first.atlas.frameWidth, first.atlas.frameHeight),
+      origin: first.atlas.origin,
+    );
+  }
 }
