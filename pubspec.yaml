@@ -1,7 +1,7 @@
 name: pixelfx_flame
 description: Reference Flame engine extension adapter providing PositionComponents and SpriteAnimation baking for pixelfx.
 version: 0.1.0
-repository: https://github.com/faustobdls/pixelfx_flutter
+repository: https://github.com/faustobdls/pixelfx_flame
 resolution: workspace
 
 environment:
